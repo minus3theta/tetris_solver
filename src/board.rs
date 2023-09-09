@@ -1,5 +1,7 @@
 use super::location::Location;
 
+pub mod row_oriented_bit_board;
+
 pub trait Board: Clone {
     type Cell;
 
