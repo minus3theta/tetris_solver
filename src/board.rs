@@ -2,6 +2,8 @@ use super::location::Location;
 
 pub mod row_oriented_bit_board;
 
+pub const BOARD_WIDTH: usize = 10;
+
 pub trait Board: Clone {
     type Cell;
 
