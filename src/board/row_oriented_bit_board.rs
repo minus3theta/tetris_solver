@@ -34,7 +34,7 @@ impl<const C: usize> Board for RowOrientedBitBoard<C> {
         todo!()
     }
 
-    fn set(&mut self, location: Location, cell: Self::Cell) -> Self::Cell {
+    fn set(&mut self, location: Location, cell: Self::Cell) {
         todo!()
     }
 }
