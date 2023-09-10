@@ -81,12 +81,28 @@ mod test {
     fn display_empty_board() {
         let board = RowOrientedBitBoard::<4>::new();
         assert_eq!(
-            format!("{}", board),
+            board.to_string(),
             "\
 ..........
 ..........
 ..........
 ..........
+"
+        );
+    }
+
+    #[test]
+    fn display_filled_board() {
+        let board = RowOrientedBitBoard {
+            rows: [FILLED_ROW; 4],
+        };
+        assert_eq!(
+            board.to_string(),
+            "\
+##########
+##########
+##########
+##########
 "
         );
     }
