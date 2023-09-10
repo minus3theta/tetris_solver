@@ -1,3 +1,7 @@
+use std::str::FromStr;
+
+use thiserror::Error;
+
 use super::Board;
 use super::Location;
 
@@ -5,7 +9,7 @@ const EMPTY_ROW: u16 = 0b1110_0000_0000_0111;
 const FILLED_ROW: u16 = 0b1111_1111_1111_1111;
 const OFFSET_X: i8 = 3;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RowOrientedBitBoard<const C: usize> {
     rows: [u16; C],
 }
@@ -18,8 +22,16 @@ impl<const C: usize> RowOrientedBitBoard<C> {
     }
 }
 
-fn bit_at(row: u16, x: i8) -> bool {
+fn get_bit_at(row: u16, x: i8) -> bool {
     row >> x & 1 != 0
+}
+
+fn set_bit_at(row: &mut u16, x: i8) {
+    *row |= 1 << x;
+}
+
+fn unset_bit_at(row: &mut u16, x: i8) {
+    *row &= !(1 << x);
 }
 
 impl<const C: usize> Default for RowOrientedBitBoard<C> {
@@ -43,7 +55,7 @@ impl<const C: usize> Board for RowOrientedBitBoard<C> {
         }
         let row = if y < C { self.rows[y] } else { EMPTY_ROW };
         let x = location.x + OFFSET_X;
-        bit_at(row, x)
+        get_bit_at(row, x)
     }
 
     fn set(&mut self, location: Location, cell: Self::Cell) {
@@ -54,9 +66,9 @@ impl<const C: usize> Board for RowOrientedBitBoard<C> {
         let row = &mut self.rows[y];
         let x = location.x + OFFSET_X;
         if cell {
-            *row |= 1 << x;
+            set_bit_at(row, x);
         } else {
-            *row &= !(1 << x);
+            unset_bit_at(row, x);
         }
     }
 
@@ -79,12 +91,52 @@ impl<const C: usize> Board for RowOrientedBitBoard<C> {
 impl<const C: usize> std::fmt::Display for RowOrientedBitBoard<C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for &row in self.rows.iter().rev() {
-            for x in (OFFSET_X..super::BOARD_WIDTH as i8 + OFFSET_X).rev() {
-                write!(f, "{}", if bit_at(row, x) { '#' } else { '.' })?;
+            for x in OFFSET_X..super::BOARD_WIDTH as i8 + OFFSET_X {
+                write!(f, "{}", if get_bit_at(row, x) { '#' } else { '.' })?;
             }
             writeln!(f)?;
         }
         Ok(())
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Error)]
+pub enum RowOrientedBitBoardFromStrError {
+    #[error("Invalid character: '{0}'")]
+    InvalidChar(char),
+    #[error("Block height exceeds board ceiling ({0})")]
+    ExceedBoardCeiling(usize),
+    #[error("Invalid line width: `{0}`")]
+    InvalidLineWidth(usize),
+}
+
+impl<const C: usize> FromStr for RowOrientedBitBoard<C> {
+    type Err = RowOrientedBitBoardFromStrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut lines = s.trim().lines().rev();
+        let mut board = Self::new();
+        for row in board.rows.iter_mut() {
+            let line = if let Some(line) = lines.next() {
+                line
+            } else {
+                break;
+            };
+            if line.len() != super::BOARD_WIDTH {
+                return Err(Self::Err::InvalidLineWidth(line.len()));
+            }
+            for (x, c) in line.chars().enumerate() {
+                match c {
+                    '#' | 'X' => set_bit_at(row, x as i8 + OFFSET_X),
+                    '.' | '_' => (),
+                    _ => return Err(Self::Err::InvalidChar(c)),
+                }
+            }
+        }
+        if lines.next().is_some() {
+            return Err(Self::Err::ExceedBoardCeiling(C));
+        }
+        Ok(board)
     }
 }
 
@@ -151,6 +203,65 @@ mod test {
 ..........
 ..........
 "
+        );
+    }
+
+    #[test]
+    fn from_string_success() {
+        let input = "\
+#.....####
+##....####
+###...####
+##....####
+";
+        assert_eq!(
+            RowOrientedBitBoard::<4>::from_str(input)
+                .unwrap()
+                .to_string(),
+            input
+        );
+    }
+
+    #[test]
+    fn from_string_invalid_char() {
+        let input = "\
+#.....####
+##....#A##
+###...####
+##....####
+";
+        assert_eq!(
+            RowOrientedBitBoard::<4>::from_str(input),
+            Err(RowOrientedBitBoardFromStrError::InvalidChar('A'))
+        );
+    }
+
+    #[test]
+    fn from_string_exceed_board_ceiling() {
+        let input = "\
+..........
+#.....####
+##....####
+###...####
+##....####
+";
+        assert_eq!(
+            RowOrientedBitBoard::<4>::from_str(input),
+            Err(RowOrientedBitBoardFromStrError::ExceedBoardCeiling(4))
+        );
+    }
+
+    #[test]
+    fn from_string_invalid_line_width() {
+        let input = "\
+#.....####
+##....####
+###...###
+##....####
+";
+        assert_eq!(
+            RowOrientedBitBoard::<4>::from_str(input),
+            Err(RowOrientedBitBoardFromStrError::InvalidLineWidth(9))
         );
     }
 }
