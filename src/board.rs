@@ -10,4 +10,5 @@ pub trait Board: Clone {
     fn ceil(&self) -> usize;
     fn get(&self, location: Location) -> Self::Cell;
     fn set(&mut self, location: Location, cell: Self::Cell);
+    fn erase_filled_lines(&mut self) -> usize;
 }

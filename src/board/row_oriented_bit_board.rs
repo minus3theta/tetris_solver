@@ -59,6 +59,21 @@ impl<const C: usize> Board for RowOrientedBitBoard<C> {
             *row &= !(1 << x);
         }
     }
+
+    fn erase_filled_lines(&mut self) -> usize {
+        let mut erased = 0;
+        let mut y = 0;
+        while y + erased < C {
+            if self.rows[y] == FILLED_ROW {
+                self.rows.copy_within(y + 1..C, y);
+                erased += 1;
+            } else {
+                y += 1;
+            }
+        }
+        self.rows[C - erased..C].fill(EMPTY_ROW);
+        erased
+    }
 }
 
 impl<const C: usize> std::fmt::Display for RowOrientedBitBoard<C> {
@@ -103,6 +118,38 @@ mod test {
 ##########
 ##########
 ##########
+"
+        );
+    }
+
+    #[test]
+    fn erase_empty() {
+        let mut board = RowOrientedBitBoard::<4>::new();
+        assert_eq!(board.erase_filled_lines(), 0);
+        assert_eq!(
+            board.to_string(),
+            "\
+..........
+..........
+..........
+..........
+"
+        );
+    }
+
+    #[test]
+    fn erase_all() {
+        let mut board = RowOrientedBitBoard {
+            rows: [FILLED_ROW; 4],
+        };
+        assert_eq!(board.erase_filled_lines(), 4);
+        assert_eq!(
+            board.to_string(),
+            "\
+..........
+..........
+..........
+..........
 "
         );
     }
