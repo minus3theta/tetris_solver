@@ -207,6 +207,29 @@ mod test {
     }
 
     #[test]
+    fn erase_mid() {
+        let mut board = RowOrientedBitBoard::<4>::from_str(
+            "\
+##########
+.......###
+##########
+###.......
+",
+        )
+        .unwrap();
+        assert_eq!(board.erase_filled_lines(), 2);
+        assert_eq!(
+            board.to_string(),
+            "\
+..........
+..........
+.......###
+###.......
+"
+        );
+    }
+
+    #[test]
     fn from_string_success() {
         let input = "\
 #.....####
